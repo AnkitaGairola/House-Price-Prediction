@@ -1,0 +1,487 @@
+---
+title: "House Price Compition"
+author: "Ankita Gairola"
+date: "2023-08-06"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### 1. Introduction
+
+Goal: Estimate the sale price of property
+
+Dataset: Data from Kaggle. In this dataset, 79 explanatory variables describing (almost) every aspect of residential homes in Ames, Iowa. 
+
+
+#### 2. Data Assessment
+
+##### 2.1 Set the Directory 
+
+getwd()
+
+setwd("E:/Kaggle/Competition_1)
+
+##### 2.2 Install packages
+
+install.packages("readr")
+
+install.packages("ggplot2")
+
+install.packages("gplots")
+
+install.packages("repr")
+
+install.packages("tidyverse")
+
+install.packages("skimr")
+
+install.packages("dplyr")
+
+install.packages("plyr")
+
+```{r}
+library(readr)
+
+library(ggplot2)
+
+library(repr)
+
+library(tidyverse)
+
+library(gplots)
+
+library(skimr)
+
+library(dplyr)
+
+library(plyr)
+```
+
+
+##### 2.2 Import Data
+
+```{r}
+Test <- read.csv("E:/Kaggle/Competition_1/house-prices-advanced-regression-techniques/test.csv")
+
+Train <- read.csv("E:/Kaggle/Competition_1/house-prices-advanced-regression-techniques/train.csv")
+
+```
+
+##### 2.3 Exploring the Data
+
+```{r}
+colnames(Test)
+
+colnames(Train)
+```
+
+
+```{r}
+dim(Test)
+
+dim(Train)
+```
+
+```{r}
+skim_without_charts(Test)
+
+skim_without_charts(Train)
+```
+
+
+```{r}
+str(Test)
+
+str(Train)
+```
+
+###### 2.3.1 Any missing value
+
+###### Missing value in Rows
+
+```{r}
+missing_row_train <- Train[!complete.cases(Train),]
+
+head(missing_row_train)
+
+missing_row_test <- Test[!complete.cases(Test),]
+
+head(missing_row_test)
+```
+
+```{r}
+nrow(Train)
+
+nrow(Test)
+
+nrow(missing_row_test)
+
+nrow(missing_row_train)
+```
+
+###### Combined Dataset
+
+```{r}
+Complete_Data <- merge(Test, Train, all = TRUE)
+
+view(Complete_Data)
+
+head(Complete_Data)
+
+dim(Complete_Data)
+
+```
+###### Selecting important variable for working
+
+
+```{r}
+variable_name <- names(Complete_Data)
+
+variable_name
+```
+
+Variables for new dataset
+
+```{r}
+ select_var <- c("Id", "MSZoning", "LotArea", "Utilities", "BldgType", "HouseStyle", "OverallQual", "OverallCond", "YearBuilt", "ExterQual", "ExterCond", "BsmtQual", "BsmtCond", "Heating", "HeatingQC", "CentralAir", "Electrical", "GrLivArea", "BedroomAbvGr", "KitchenAbvGr","KitchenQual",  "TotRmsAbvGrd", "Functional", "Fireplaces", "GarageType", "PoolArea","Fence","MoSold",   "YrSold", "SaleType", "SaleCondition", "SalePrice")
+```
+
+
+##### 2.4 New dataset for prediction
+
+```{r}
+new_dataset <- Complete_Data[, select_var]
+
+head(new_dataset)
+```
+
+```{r}
+summary(new_dataset)
+```
+
+
+
+```{r}
+cleaned_data <- new_dataset[complete.cases(new_dataset), ]
+```
+
+
+###### 2.4.1 Analyze form sales price
+
+
+```{r}
+summary(cleaned_data$SalePrice)
+```
+
+###### Distribustion of sales price
+
+```{r}
+options(scipen=10000)
+ggplot(cleaned_data, aes(x = SalePrice, fill = ..count..)) +
+  geom_histogram(binwidth = 5000) +
+  ggtitle("Figure 1 Histogram of SalePrice") +
+  ylab("Count of houses") +
+  xlab("Housing Price") + 
+  theme(plot.title = element_text(hjust = 0.8))
+```
+
+
+###### Distribution of Sales price by MSZoing
+
+```{r}
+options(repr.plot.width=5, repr.plot.height=4)
+ggplot(cleaned_data, aes(x = MSZoning, fill = MSZoning )) + 
+geom_bar()+ 
+scale_fill_hue(c = 80)+
+ggtitle("Figure 2 Distribution of MSZoning")+
+theme(plot.title = element_text(hjust = 0.5),legend.position="right", legend.background = element_rect(fill="grey90",
+                                                                                                           size=0.5, linetype="solid", 
+                                                                                                           colour ="black"))+
+geom_text(stat='count',aes(label=..count..),vjust=-0.25)
+```
+
+
+
+###### Distribution of sale price by BldfType
+
+```{r}
+ddply(cleaned_data, .(BldgType), summarize,Total = length(BldgType),Max_price=max(SalePrice),Min_price=min(SalePrice))
+```
+
+```{r}
+ggplot(cleaned_data, aes(SalePrice)) +
+ geom_histogram(aes(fill = BldgType), position = position_stack(reverse = TRUE), binwidth = 20000) +
+ coord_flip() + ggtitle("Figure 3 Histogram of SalePrice") +
+ ylab("Count") +
+ xlab("Housing Price") + 
+ theme(plot.title = element_text(hjust = 0.5),legend.position=c(0.7,0.6), legend.background = element_rect(fill="grey90",
+                                                                                                           size=0.6, linetype="solid", 
+                                                                                                           colour ="black"))
+```
+
+###### Distribution of price by OverallQual
+
+```{r}
+ggplot(cleaned_data, aes(x = SalePrice,fill = as.factor(OverallQual))) +
+  geom_histogram(position = "stack", binwidth = 10000) +
+  ggtitle("Figure 4 Histogram of SalePrice") +
+  ylab("Count") +
+  xlab("Housing Price") + 
+  scale_fill_discrete(name="OverallQual")+
+  theme(plot.title = element_text(hjust = 0.7), legend.position=c(0.9,0.7), legend.background = element_rect(fill="grey90",
+                                                                                                           size=0.7, linetype="solid", 
+                                                                                                           colour ="black"))
+```
+
+
+##### 2.5. Corelation Exploreation
+
+Correlation  between Sales price and TotRmsAbvGrd
+
+```{r}
+ggplot(cleaned_data, aes(x=TotRmsAbvGrd, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 5 Scatter plot of Sale Price and TotRmsAbvGrd") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+
+Correlation  between Sales price and heating
+
+```{r}
+ggplot(cleaned_data, aes(x=Heating, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 6 Scatter plot of Sale Price and Heating") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+
+Correlation  between Sales price and Lot Area
+
+
+```{r}
+ggplot(cleaned_data, aes(x=LotArea, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 7 Scatter plot of Sale Price and Lot Area") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+Correlation  between Sales price and House Style
+
+```{r}
+ggplot(cleaned_data, aes(x=HouseStyle, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 8 Scatter plot of Sale Price and House Style") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+Correlation between Sales price and OverallQual
+
+```{r}
+ggplot(cleaned_data, aes(x=OverallQual, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 9 Scatter plot of Sale Price and OverallQual") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+Correlation between Sales price and GrLivArea
+
+```{r}
+ggplot(cleaned_data, aes(x=GrLivArea, y=SalePrice)) + 
+  geom_point(shape=1) +  
+  geom_smooth(method=lm , color="blue", se=FALSE)+
+  ggtitle("Figure 10 Scatter plot of Sale Price and GrLivArea") +
+  theme(plot.title = element_text(hjust = 0.6))
+```
+
+#### 3. Linear Regression Model
+
+###### 3.1 Varibles for regression model
+
+```{r}
+model_variables <- c("Id", "OverallQual", "OverallCond", "YearBuilt", "ExterQual", "ExterCond", "BsmtQual", "BsmtCond", "HeatingQC", "CentralAir", "Electrical", "GrLivArea", "BedroomAbvGr", "KitchenAbvGr","KitchenQual", "TotRmsAbvGrd", "Functional", "Fireplaces", "GarageType", "PoolArea","Fence","SalePrice")
+```
+
+
+```{r}
+Newmodel_Dataset <- new_dataset[, model_variables]
+
+Newmodel_Dataset$SalePrice1 <- log(Newmodel_Dataset$SalePrice)
+```
+
+Dividing dataset in two parts. one is model_data_1 and other is model_data_2
+
+```{r}
+set.seed(10000)
+model.index <- sample(c(1:dim(Newmodel_Dataset)[1]), dim(Newmodel_Dataset)[1]*0.6)
+model_data_1 = Newmodel_Dataset[model.index,]
+model_data_2 <- Newmodel_Dataset[-model.index,]
+
+
+```
+
+Run Regression
+
+```{r}
+Regdata <- lm(SalePrice1~.-SalePrice, data = model_data_1)
+summary(Regdata)
+```
+
+
+###### 3.2 Classification of Tree
+
+install.package("rpart")
+
+install.packages("rpart.plot")
+
+```{r}
+library(rpart)
+
+library(rpart.plot)
+```
+
+
+
+```{r}
+Newmodel.tree <- rpart(SalePrice~.-SalePrice,
+                    data = model_data_1,control = rpart.control(cp = 0.03))
+
+plotcp(Newmodel.tree)
+printcp(Newmodel.tree)
+```
+
+
+
+###### 3.3 Random Forest
+
+install.packages("randomForest")
+
+install.packages("yardstick")
+
+```{r}
+library(randomForest)
+
+library(yardstick)
+```
+```{r}
+model_data_3 <-na.omit(model_data_1)
+```
+
+
+```{r}
+RF <- randomForest(SalePrice1 ~ . - SalePrice, data = model_data_3,
+                   importance = TRUE, ntree = 500, nodesize = 7)
+```
+
+
+
+```{r}
+options(repr.plot.width = 9, repr.plot.height = 6)
+varImpPlot(RF, type = 1)
+```
+
+```{r}
+rf.pred <- predict(RF, newdata=model_data_2)
+```
+
+
+```{r}
+plot(rf.pred, model_data_2$lSalePrice1, main = "Figure 10 Predicted vs. Actual log SalePrice") 
+abline(0,1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
